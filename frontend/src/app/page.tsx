@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
+import MiniMapa from './ubicaciones/page'
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
           Comenzar
         </Link>
       </section>
+      <MiniMapa />
     </div>
   )
 }
