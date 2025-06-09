@@ -26,17 +26,10 @@ app.add_middleware(
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Server Status</title>
-    </head>
-    <body>
-        <h1>Jhunior Goood</h1>
-    </body>
-    </html>
+    html_content = """
+        <h1>Server is Running</h1>
     """
+    return HTMLResponse(content=html_content)
 
 app.include_router(usuarios.router)
 app.include_router(asistencia.router)

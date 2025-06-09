@@ -37,7 +37,7 @@ export default function MiniMapa() {
 
             try {
                 const res = await fetch(
-                    "http://localhost:8000/api/ubicaciones/actuales"
+                    `http://localhost:8000/api/ubicaciones/actuales`
                 );
                 const data: { ubicacion: string; personas: Persona[] }[] =
                     await res.json();
@@ -84,7 +84,7 @@ export default function MiniMapa() {
     const aulas = ["Aula 1", "Aula 2", "Aula 3", "Aula 4", "Aula 5", "Aula 6"];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="bg-gray-50 p-6 mt-12">
             <header className="flex flex-col sm:flex-row items-center justify-between mb-8">
                 <div className="flex items-center mb-4 sm:mb-0">
                     <FaMapMarkerAlt className="text-red-500 text-3xl mr-2" />

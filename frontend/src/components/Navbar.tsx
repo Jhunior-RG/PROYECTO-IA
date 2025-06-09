@@ -10,11 +10,10 @@ export default function Navbar() {
     ];
 
     return (
-        <nav className="fixed top-0 w-full bg-white bg-opacity-90 backdrop-blur-md shadow-md z-50 flex justify-between items-center px-5">
+        <nav className="fixed top-0 w-full  bg-white bg-opacity-90 backdrop-blur-md shadow-md z-50 flex justify-between items-center px-5 h-14">
             <Link href="/" className="text-2xl font-bold text-teal-600">
                 AsisTec
             </Link>
-
             <ul className="flex gap-5">
                 {links.map((l) => (
                     <li key={l.href} className="py-2 px-4 md:p-0 text-center">
