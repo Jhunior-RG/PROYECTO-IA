@@ -88,18 +88,3 @@ npm run dev
 | GET    | `/api/ubicaciones/actuales` | Lista quiénes están presentes en cada aula |
 | GET    | `/api/ubicaciones`          | CRUD/Lectura de aulas                      |
 | GET    | `/api/historial`            | Historial completo con filtros opcionales  |
-
----
-
-## 💡 Buenas prácticas
-
-* Versiona **package-lock.json** para reproducibilidad completa.
-* Usa `npm run dev` (ts-node-dev) sólo en desarrollo; para producción: `npm run build && npm start`.
-* Mantén **.env** fuera de control de versiones; provee **.env.example** con las claves requeridas (`DATABASE_URL`, `PORT`, etc.).
-* Sirve las imágenes con `express.static('/uploads')` y **no** dentro de `src/`.
-* Añade un manejador global de errores y `process.on('SIGINT')` para cerrar `prisma.$disconnect()` limpiamente.
-
-```
-
-> Pega tal cual en tu README y elimina toda referencia a FastAPI/Uvicorn.
-```
