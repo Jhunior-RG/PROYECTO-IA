@@ -80,5 +80,20 @@ router.post('/', upload.array('files'), async (req, res) => {
         res.status(500).json({ error: 'Error al registrar usuario' });
     }
 });
+export async function handleClientDisconnect(userId: number, id_lugar: number) {
+    const asistencia = await prisma.asistencia.findFirst({
+        where: { id_usuario: userId, id_lugar: id_lugar, hora_salida: null },
+        orderBy: { hora_entrada: 'desc' }
+    });
+    if (asistencia && asistencia.hora_entrada) {
+        await prisma.asistencia.update({
+            where: { id: asistencia.id },
+            data: {
+                hora_salida: new Date(asistencia.hora_entrada.getTime() + 30000) // 30 segundos = 30000 ms
+            }
+        });
+        console.log(`Salida registrada de user ${userId}`);
+    }
+}
 
 export default router;

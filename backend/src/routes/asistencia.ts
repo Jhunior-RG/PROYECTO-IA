@@ -45,8 +45,14 @@ router.post("/", async (req: Request, res: Response) => {
 })
 
 router.get("/", async (req: Request, res: Response) => {
-    const asistencias = await prisma.asistencia.findMany();
+    const asistencias = await prisma.asistencia.findMany({
+        include: {
+            usuario: true,
+            lugar: true
+        }
+    });
     res.json(asistencias);
 })
+
 
 export default router;

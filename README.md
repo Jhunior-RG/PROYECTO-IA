@@ -1,116 +1,105 @@
-
+# 📚 README
 ## Estructura del proyecto
 
 ```text
 mi-proyecto/
-├── backend/        # API FastAPI
-│   ├── main.py
-│   ├── routers/
-│   ├── models/
-│   ├── db/
-│   ├── requirements.txt
-│   └── .venv/
-├── frontend/       # App Next.js
+├── backend/           # API Express + TypeScript + Prisma
+│   ├── prisma/        # schema.prisma, migrations/, seed.ts
+│   ├── src/
+│   │   ├── index.ts   # punto de entrada
+│   │   └── routes/    # usuarios.ts, asistencia.ts, ubicaciones.ts…
+│   ├── .env           # DATABASE_URL, PORT…
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/          # App Next.js (React 18)
 │   ├── app/
 │   ├── components/
 │   ├── public/
-│   ├── package.json
-│   └── node_modules/
+│   └── package.json
 ├── .gitignore
-└── README.md       # Este archivo
+└── README.md          # este archivo
 ````
 
 ---
 
 ## 🛠 Prerrequisitos
 
-* **Python 3.10+**
-* **Node.js 16+**
-* **Git**
+| Herramienta | Versión mínima |
+| ----------- | -------------- |
+| **Node.js** | 18 LTS         |
+| **npm**     | 9 +            |
+| **Git**     | —              |
+
+>Prisma usa SQLite por defecto. (Cambia a PostgreSQL añadiendo otra cadena `DATABASE_URL`).
 
 ---
 
 ## ⚙️ Configuración y arranque
 
-### 1. Backend (FastAPI + Uvicorn)
+### 1. Backend (Express + Prisma)
 
-1. **Crear y activar entorno virtual**
+```bash
+# 1.1  Instalar dependencias
+cd backend
+npm install
 
-   ```bash
-   cd backend
-   python -m venv .venv
+# 1.2  Crear la base de datos y generar cliente
+npx prisma migrate dev --name init   # crea dev.db + migraciones
+# (Opcional) npx prisma db seed      # si tienes prisma/seed.ts
 
-   .venv\Scripts\activate
+# 1.3  Arrancar en modo desarrollo (hot-reload)
+npm run dev    # ts-node-dev src/index.ts
+```
 
-   ```
-
-2. **Instalar dependencias**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Arrancar el servidor**
-
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-   * Por defecto corre en: `http://127.0.0.1:8000`
+* Escucha en: **[http://localhost:4000](http://localhost:4000)**
 
 ---
 
 ### 2. Frontend (Next.js)
 
-1. **Instalar dependencias**
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
 
-   ```bash
-   cd ../frontend
-   npm install
-   ```
-
-2. **Arrancar la aplicación**
-
-   ```bash
-   npm run dev
-   ```
-
-   * Por defecto corre en: `http://localhost:3000`
+* Escucha en: **[http://localhost:3000](http://localhost:3000)**
 
 ---
 
 ## 🚀 Cómo usar
 
-1. Abre tu navegador en `http://localhost:3000`.
-2. En la barra de navegación, haz clic en **Registrar**:
+1. Visita **[http://localhost:3000](http://localhost:3000)**.
+2. En la barra, haz clic en **Registrar** y sube una o varias fotos.
+3. Vuelve al inicio y pulsa **Comenzar**:
 
-   * Introduce tu nombre.
-   * Sube una o varias fotos de tu rostro.
-3. Regresa a la **Home** y pulsa **Comenzar**:
-
-   * Selecciona el aula donde realizarás el reconocimiento.
-   * Se iniciará la cámara y, al detectar tu cara, registrará automáticamente tus entradas y salidas.
+   * Selecciona el aula.
+   * La cámara detectará tu rostro y registrará **entradas** y **salidas** de forma automática.
 
 ---
 
-## 📋 Endpoints clave
+## 📋 Endpoints clave (Express API)
 
-| Método | Ruta                        | Descripción                                   |
-| ------ | --------------------------- | --------------------------------------------- |
-| POST   | `/api/usuarios/register`    | Registra un nuevo usuario y guarda sus fotos. |
-| GET    | `/api/usuarios`             | Lista usuarios con URLs a sus imágenes.       |
-| POST   | `/api/asistencia`           | Registra un evento de entrada o salida.       |
-| GET    | `/api/ubicaciones/actuales` | Muestra quiénes están dentro de cada aula.    |
-| GET    | `/api/ubicaciones`          | Listado de aulas y personas presentes.        |
-| GET    | `/api/historial`            | Historial completo de asistencias.            |
+| Método | Ruta                        | Descripción                                |
+| ------ | --------------------------- | ------------------------------------------ |
+| POST   | `/api/usuarios/register`    | Registra usuario y sube fotos              |
+| GET    | `/api/usuarios`             | Devuelve usuarios + URLs de imágenes       |
+| POST   | `/api/asistencia`           | Crea evento de **entrada** o **salida**    |
+| GET    | `/api/ubicaciones/actuales` | Lista quiénes están presentes en cada aula |
+| GET    | `/api/ubicaciones`          | CRUD/Lectura de aulas                      |
+| GET    | `/api/historial`            | Historial completo con filtros opcionales  |
 
 ---
 
 ## 💡 Buenas prácticas
 
-* Mantén el archivo `requirements.txt` con versiones fijas para asegurar reproducibilidad.
-* Usar `uvicorn main:app --reload` en lugar de `fastapi run` para mayor compatibilidad.
-* Añade a `.gitignore` cualquier carpeta o archivo sensible (por ejemplo, `.env`, archivos DB locales, `.venv/`).
-* Documenta cualquier variable de entorno necesaria (p.ej., `DATABASE_URL`) en un archivo `.env.example`.
+* Versiona **package-lock.json** para reproducibilidad completa.
+* Usa `npm run dev` (ts-node-dev) sólo en desarrollo; para producción: `npm run build && npm start`.
+* Mantén **.env** fuera de control de versiones; provee **.env.example** con las claves requeridas (`DATABASE_URL`, `PORT`, etc.).
+* Sirve las imágenes con `express.static('/uploads')` y **no** dentro de `src/`.
+* Añade un manejador global de errores y `process.on('SIGINT')` para cerrar `prisma.$disconnect()` limpiamente.
 
+```
 
+> Pega tal cual en tu README y elimina toda referencia a FastAPI/Uvicorn.
+```

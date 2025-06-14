@@ -17,6 +17,35 @@ router.post("/", async (req: Request, res: Response) => {
 
 // obtener 
 router.get('/actuales', async (req: Request, res: Response) => {
+    // Primero obtenemos todas las asistencias sin salida
+    const asistenciasSinSalida = await prisma.asistencia.findMany({
+        where: { hora_salida: null },
+        orderBy: { hora_entrada: 'desc' }
+    });
+
+    // Agrupamos por usuario y actualizamos todas excepto la más reciente
+    const asistenciasPorUsuario = new Map();
+    asistenciasSinSalida.forEach(asistencia => {
+        if (!asistenciasPorUsuario.has(asistencia.id_usuario)) {
+            asistenciasPorUsuario.set(asistencia.id_usuario, []);
+        }
+        asistenciasPorUsuario.get(asistencia.id_usuario).push(asistencia);
+    });
+
+    // Actualizamos todas las asistencias excepto la más reciente de cada usuario
+    for (const [_, asistencias] of asistenciasPorUsuario) {
+        if (asistencias.length > 1) {
+            const idsParaActualizar = asistencias.slice(1).map((a: { id: number }) => a.id);
+            await prisma.asistencia.updateMany({
+                where: {
+                    id: { in: idsParaActualizar }
+                },
+                data: {
+                    hora_salida: new Date(new Date().getTime() + 30000)
+                }
+            });
+        }
+    }
 
     const lugares = await prisma.lugar.findMany({
         include: {

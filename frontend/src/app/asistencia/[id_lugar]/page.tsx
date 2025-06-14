@@ -23,6 +23,7 @@ export default function Asistencia() {
         null
     );
     const [cargado, setCargado] = useState(false);
+
     useEffect(() => {
         async function init() {
             const MODEL_URL = "/models";
@@ -68,27 +69,8 @@ export default function Asistencia() {
         init();
     }, []);
 
-    const handleBeforeUnload = () => {
-        for (const nombre in personasActivas) {
-            const data = JSON.stringify({
-                nombre,
-                id_lugar,
-                tipo: "salida",
-            });
-            const blob = new Blob([data], { type: "application/json" });
-            navigator.sendBeacon(API_URL + "/asistencia", blob);
-        }
-    };
-
-    useEffect(() => {
-        window.addEventListener("pagehide", handleBeforeUnload);
-        return () => {
-            window.removeEventListener("pagehide", handleBeforeUnload);
-        };
-    }, [id_lugar]);
-    
     if (!id_lugar) return;
-    // Iniciar cámara con resolución 16:9
+
     const iniciarCamara = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -105,7 +87,6 @@ export default function Asistencia() {
         }
     };
 
-    // Reconocimiento facial y registro
     const handleVideoPlay = () => {
         const video = videoRef.current!;
         const canvas = canvasRef.current!;
@@ -133,7 +114,6 @@ export default function Asistencia() {
                 const match = faceMatcher.findBestMatch(d.descriptor);
                 const { x, y, width, height } = d.detection.box;
 
-                // Dibujar rectángulo de detección
                 ctx.strokeStyle = "#00ff00";
                 ctx.lineWidth = 2;
                 ctx.strokeRect(x, y, width, height);
@@ -142,7 +122,6 @@ export default function Asistencia() {
                     match.label === "unknown" ? "Desconocido" : match.label;
                 const texto = `${label} `;
 
-                // Texto simple sin formato
                 ctx.fillStyle = "white";
                 ctx.font = "30px Arial";
                 ctx.fillText(texto, x + 4, y - 5);
@@ -162,11 +141,9 @@ export default function Asistencia() {
                             id_lugar: parseInt(id_lugar as string),
                             tipo: "entrada",
                         };
-                        console.log(data);
 
                         postAsistencia(data);
                     } else {
-                        // Solo actualizar último visto
                         console.log(
                             "actualizando ultima vez visto de ",
                             nombre
@@ -178,10 +155,9 @@ export default function Asistencia() {
             const ahora = Date.now();
             for (const [nombre, datos] of Object.entries(personasActivas)) {
                 if (ahora - datos.ultimaVezVisto > 30000) {
-                    // Persona ha salido (más de 30s sin verla)
                     const data: AsistenciaData = {
                         nombre,
-                        id_lugar: 1,
+                        id_lugar: parseInt(id_lugar as string),
                         tipo: "salida",
                     };
                     postAsistencia(data);
