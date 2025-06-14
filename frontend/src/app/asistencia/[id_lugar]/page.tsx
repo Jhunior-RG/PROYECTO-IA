@@ -2,35 +2,40 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import * as faceapi from "face-api.js";
-import { API_URL, postAsistencia, type AsistenciaData } from "@/services/api";
+import {
+    modelos,
+    cargarImagenDesdeURL,
+    detectarRostros,
+    DescriptorRostroEtiquetado,
+    ComparadorRostros,
+    ajustarLienzo,
+    redimensionarResultados,
+} from "@/services/reconocimiento";
+import { API_URL, postAsistencia } from "@/services/api";
 
 const personasActivas: Record<
     string,
-    {
-        entrada: string;
-        ultimaVezVisto: number;
-    }
+    { entrada: string; ultimaVezVisto: number }
 > = {};
 
 export default function Asistencia() {
     const { id_lugar } = useParams();
-
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const [faceMatcher, setFaceMatcher] = useState<faceapi.FaceMatcher | null>(
+    // Ahora mantenemos un ComparadorRostros en vez de FaceMatcher
+    const [comparador, setComparador] = useState<ComparadorRostros | null>(
         null
     );
     const [cargado, setCargado] = useState(false);
 
     useEffect(() => {
         async function init() {
-            const MODEL_URL = "/models";
+            const MODELOS_URL = "/models";
             await Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                modelos.cargarDetector(MODELOS_URL),
+                modelos.cargarPuntosFaciales(MODELOS_URL),
+                modelos.cargarReconocedor(MODELOS_URL),
             ]);
 
             const res = await fetch(API_URL + "/usuarios");
@@ -40,69 +45,57 @@ export default function Asistencia() {
                 imagenes: string[];
             }[] = await res.json();
 
-            const descriptors: faceapi.LabeledFaceDescriptors[] = [];
+            // Para cada usuario, detecto 1 rostro y genero sus descriptores etiquetados
+            const descriptores: DescriptorRostroEtiquetado[] = [];
             for (const persona of personas) {
-                const descs: Float32Array[] = [];
-                for (const urlImage of persona.imagenes) {
-                    const img = await faceapi.fetchImage(urlImage);
-                    const d = await faceapi
-                        .detectSingleFace(img)
-                        .withFaceLandmarks()
-                        .withFaceDescriptor();
-                    if (d) descs.push(d.descriptor);
+                const vectores: Float32Array[] = [];
+                for (const url of persona.imagenes) {
+                    const img = await cargarImagenDesdeURL(url);
+                    const d = await detectarRostros(img);
+                    if (Array.isArray(d) && d[0]?.descriptor) {
+                        vectores.push(d[0].descriptor);
+                    }
                 }
-                if (descs.length) {
-                    descriptors.push(
-                        new faceapi.LabeledFaceDescriptors(
-                            persona.nombre,
-                            descs
-                        )
+                if (vectores.length) {
+                    descriptores.push(
+                        new DescriptorRostroEtiquetado(persona.nombre, vectores)
                     );
                 }
             }
 
-            setFaceMatcher(new faceapi.FaceMatcher(descriptors));
+            // Creo mi comparador con esos descriptores
+            setComparador(new ComparadorRostros(descriptores));
             setCargado(true);
             iniciarCamara();
         }
-
         init();
     }, []);
 
-    if (!id_lugar) return;
+    if (!id_lugar) return null;
 
     const iniciarCamara = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                },
+                video: { width: 1280, height: 720 },
             });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+            if (videoRef.current) videoRef.current.srcObject = stream;
         } catch (err) {
-            console.error("Error al iniciar la cámara:", err);
+            console.error("Error iniciando cámara:", err);
         }
     };
 
     const handleVideoPlay = () => {
         const video = videoRef.current!;
         const canvas = canvasRef.current!;
-        if (!faceMatcher) return;
+        if (!comparador) return;
 
-        faceapi.matchDimensions(canvas, {
-            width: 1280,
-            height: 720,
-        });
+        // Preparo canvas
+        ajustarLienzo(canvas, { width: 1280, height: 720 });
 
         setInterval(async () => {
-            const dets = await faceapi
-                .detectAllFaces(video)
-                .withFaceLandmarks()
-                .withFaceDescriptors();
-            const resized = faceapi.resizeResults(dets, {
+            // Detecto rostros en el video
+            const detecciones = await detectarRostros(video);
+            const resultados = redimensionarResultados(detecciones, {
                 width: 1280,
                 height: 720,
             });
@@ -110,57 +103,53 @@ export default function Asistencia() {
             const ctx = canvas.getContext("2d")!;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            for (const d of resized) {
-                const match = faceMatcher.findBestMatch(d.descriptor);
-                const { x, y, width, height } = d.detection.box;
-
+            for (const resultado of resultados) {
+                const { x, y, width, height } = resultado.detection.box;
+                // Dibujo caja
                 ctx.strokeStyle = "#00ff00";
                 ctx.lineWidth = 2;
                 ctx.strokeRect(x, y, width, height);
 
-                const label =
-                    match.label === "unknown" ? "Desconocido" : match.label;
-                const texto = `${label} `;
-
+                // Comparo descriptor
+                const match = comparador.mejorCoincidencia(
+                    resultado.descriptor
+                );
+                const nombre =
+                    match.etiqueta === "unknown"
+                        ? "Desconocido"
+                        : match.etiqueta;
+                // Texto
                 ctx.fillStyle = "white";
                 ctx.font = "30px Arial";
-                ctx.fillText(texto, x + 4, y - 5);
+                ctx.fillText(nombre, x + 4, y - 5);
 
                 const ahora = Date.now();
-                const nombre = match.label;
-
-                if (nombre !== "unknown") {
+                if (nombre !== "Desconocido") {
                     if (!personasActivas[nombre]) {
                         personasActivas[nombre] = {
                             entrada: new Date().toISOString(),
                             ultimaVezVisto: ahora,
                         };
-
-                        const data: AsistenciaData = {
+                        postAsistencia({
                             nombre,
                             id_lugar: parseInt(id_lugar as string),
                             tipo: "entrada",
-                        };
-
-                        postAsistencia(data);
+                        });
                     } else {
-                        console.log(
-                            "actualizando ultima vez visto de ",
-                            nombre
-                        );
                         personasActivas[nombre].ultimaVezVisto = ahora;
                     }
                 }
             }
+
+            // Registro salidas tras 30 s sin verse
             const ahora = Date.now();
             for (const [nombre, datos] of Object.entries(personasActivas)) {
                 if (ahora - datos.ultimaVezVisto > 30000) {
-                    const data: AsistenciaData = {
+                    postAsistencia({
                         nombre,
                         id_lugar: parseInt(id_lugar as string),
                         tipo: "salida",
-                    };
-                    postAsistencia(data);
+                    });
                     delete personasActivas[nombre];
                 }
             }
@@ -174,20 +163,19 @@ export default function Asistencia() {
             </h1>
             <p className="text-sm text-gray-600 max-w-3xl mb-4 text-center">
                 Asegúrate de que tu cámara esté encendida y que el navegador
-                tenga permisos para acceder a ella. El reconocimiento facial se
-                activará automáticamente al detectar rostros.
+                tenga permisos para acceder a ella.
             </p>
 
             <div className="relative w-full max-w-3xl aspect-video mx-auto border-2 border-gray-400 rounded-lg overflow-hidden bg-black">
                 {!cargado ? (
                     <div className="flex items-center justify-center h-full text-white">
                         <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
                             <p>Cargando modelos y cámara...</p>
                         </div>
                     </div>
                 ) : (
-                    <div className="relative w-full h-full">
+                    <>
                         <video
                             ref={videoRef}
                             width={720}
@@ -203,29 +191,25 @@ export default function Asistencia() {
                             height={560}
                             className="absolute top-0 left-0 w-full h-full"
                         />
-                    </div>
+                    </>
                 )}
             </div>
 
-            <div className="text-sm text-gray-500 text-center space-y-2">
-                {Object.keys(personasActivas).length > 0 && (
-                    <div className="bg-gray-100 rounded-lg p-3 max-w-md mx-auto">
-                        <p className="text-xs font-semibold mb-2">
-                            Personas detectadas:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                            {Object.entries(personasActivas).map(([nombre]) => (
-                                <span
-                                    key={nombre}
-                                    className="bg-green-500 text-white px-2 py-1 rounded-full text-xs"
-                                >
-                                    {nombre}
-                                </span>
-                            ))}
-                        </div>
+            {Object.keys(personasActivas).length > 0 && (
+                <div className="bg-gray-100 rounded-lg p-3 max-w-md mx-auto text-sm text-gray-500">
+                    <p className="font-semibold mb-2">Personas detectadas:</p>
+                    <div className="flex flex-wrap gap-2">
+                        {Object.keys(personasActivas).map((nombre) => (
+                            <span
+                                key={nombre}
+                                className="bg-green-500 text-white px-2 py-1 rounded-full text-xs"
+                            >
+                                {nombre}
+                            </span>
+                        ))}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }

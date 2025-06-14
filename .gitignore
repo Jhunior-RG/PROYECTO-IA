@@ -10,3 +10,5 @@ backend/*.db
 backend/routers/__pycache__/
 **/__pycache__
 backend/prisma/database.db
+backend/prisma/database.db
+backend/prisma/database.db-journal

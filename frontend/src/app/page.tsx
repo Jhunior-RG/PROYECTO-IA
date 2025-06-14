@@ -43,7 +43,7 @@ export default function Home() {
                             entradas y salidas de manera automática y eficiente.
                         </p>
                         <Link
-                            href="/registro"
+                            href="/ubicacion"
                             className="btn-primary inline-flex items-center cursor-pointer hover:bg-teal-600 hover:text-white transition-all duration-300 hover:scale-102 hover:shadow-lg rounded-md p-2 text-teal-700"
                         >
                             <FaVideo className="mr-2" />
