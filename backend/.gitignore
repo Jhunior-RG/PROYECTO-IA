@@ -1,5 +1,7 @@
-/__pycache__
-/db/__pycache__
-/models/__pycache__
-/routers/__pycache__
-/schemas/__pycache__
+node_modules
+# Keep environment variables out of version control
+.env
+
+/src/generated/prisma
+
+/src/generated/prisma

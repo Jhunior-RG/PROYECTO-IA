@@ -4,9 +4,8 @@ import Link from "next/link";
 export default function Navbar() {
     const links = [
         { name: "Inicio", href: "/" },
-        { name: "Reconocimiento", href: "/reconocimiento" },
         { name: "Ubicaciones", href: "/ubicaciones" },
-        { name: "registro", href: "/registro" },
+        { name: "Registro", href: "/registro" },
     ];
 
     return (

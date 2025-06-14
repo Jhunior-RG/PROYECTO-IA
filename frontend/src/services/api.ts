@@ -1,4 +1,4 @@
-export const API_URL = "http://127.0.0.1:8000";
+export const API_URL = "http://localhost:4000";
 
 export async function registrarEntrada(id_usuario: string) {
     const response = await fetch(`${API_URL}/asistencia/entrada`, {
@@ -34,14 +34,11 @@ export async function listarUsuarios() {
 
 export const registrarAsistencia = async (idUsuario: string) => {
     try {
-        const response = await fetch(
-            "http://localhost:8000/asistencia/entrada",
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id_usuario: idUsuario }),
-            }
-        );
+        const response = await fetch(API_URL + "/asistencia/entrada", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_usuario: idUsuario }),
+        });
         const data = await response.json();
         console.log(data.msg);
     } catch (error) {
@@ -50,8 +47,7 @@ export const registrarAsistencia = async (idUsuario: string) => {
 };
 export interface AsistenciaData {
     nombre: string;
-    fecha: string;
-    aula?: string;
+    id_lugar?: string | number;
     tipo: "entrada" | "salida";
 }
 

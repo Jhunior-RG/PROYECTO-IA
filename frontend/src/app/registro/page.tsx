@@ -39,7 +39,7 @@ export default function Registro() {
             formData.append("files", file);
         });
 
-        const res = await fetch(API_URL + "/usuarios/register", {
+        const res = await fetch(API_URL + "/usuarios/", {
             method: "POST",
             body: formData,
         });

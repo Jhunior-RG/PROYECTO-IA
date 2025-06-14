@@ -1,22 +1,30 @@
 "use client";
 
+import { API_URL } from "@/services/api";
 import { useEffect, useState } from "react";
 import { FaMapMarkerAlt, FaClock, FaUser } from "react-icons/fa";
 
-interface Persona {
-    id: string;
+export interface Usuario {
+    id: number;
     nombre: string;
-    fecha: string;
-    hora_entrada: string;
 }
-
-interface MapaItem {
-    aula: string;
-    personas: Persona[];
+export interface Lugar {
+    id: number;
+    nombre: string;
+    asistencias: Asistencia[];
+}
+export interface Asistencia {
+    hora_entrada: string;
+    hora_salida: string;
+    id: number;
+    id_lugar: number;
+    id_usuario: number;
+    lugar?: Lugar;
+    usuario?: Usuario;
 }
 
 export default function MiniMapa() {
-    const [actuales, setActuales] = useState<MapaItem[]>([]);
+    const [actuales, setActuales] = useState<Lugar[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Formatea ISO string a hora local sin milisegundos
@@ -36,18 +44,10 @@ export default function MiniMapa() {
             if (isFirst) setLoading(true);
 
             try {
-                const res = await fetch(
-                    `http://localhost:8000/api/ubicaciones/actuales`
-                );
-                const data: { ubicacion: string; personas: Persona[] }[] =
-                    await res.json();
+                const res = await fetch(API_URL + `/ubicaciones/actuales`);
+                const data: Lugar[] = await res.json();
 
-                setActuales(
-                    data.map((item) => ({
-                        aula: item.ubicacion,
-                        personas: item.personas,
-                    }))
-                );
+                setActuales(data);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -81,8 +81,6 @@ export default function MiniMapa() {
         );
     }
 
-    const aulas = ["Aula 1", "Aula 2", "Aula 3", "Aula 4", "Aula 5", "Aula 6"];
-
     return (
         <div className="bg-gray-50 p-6 mt-12">
             <header className="flex flex-col sm:flex-row items-center justify-between mb-8">
@@ -98,14 +96,13 @@ export default function MiniMapa() {
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-7xl mx-auto">
-                {aulas.map((aula) => {
-                    const item = actuales.find((x) => x.aula === aula);
-                    const count = item?.personas.length || 0;
+                {actuales.map((lugar) => {
+                    const count = lugar?.asistencias.length || 0;
                     const occupied = count > 0;
 
                     return (
                         <div
-                            key={aula}
+                            key={lugar.id}
                             className={`
                 relative bg-white rounded-lg shadow-md p-5
                 transition-transform transform hover:scale-105 hover:shadow-lg
@@ -127,27 +124,25 @@ export default function MiniMapa() {
                             </div>
 
                             <h2 className="text-xl font-bold mb-4 text-gray-800">
-                                {aula}
+                                {lugar.nombre}
                             </h2>
 
                             {occupied ? (
                                 <ul className="space-y-3 max-h-48 overflow-y-auto pr-2">
-                                    {item!.personas.map((persona) => (
+                                    {lugar.asistencias.map((asistencia) => (
                                         <li
-                                            key={persona.id}
+                                            key={asistencia.id}
                                             className="flex items-center bg-gray-100 rounded-lg p-3"
                                         >
                                             <FaUser className="text-teal-600 mr-3" />
                                             <div>
                                                 <p className="font-medium text-gray-800">
-                                                    {persona.nombre}
+                                                    {asistencia.usuario?.nombre}
                                                 </p>
                                                 <p className="text-gray-500 text-sm">
                                                     Entrada:{" "}
                                                     {formatTime(
-                                                        persona.fecha +
-                                                            " " +
-                                                            persona.hora_entrada
+                                                        asistencia.hora_entrada
                                                     )}
                                                 </p>
                                             </div>
