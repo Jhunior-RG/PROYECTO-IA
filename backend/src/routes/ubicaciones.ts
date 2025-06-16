@@ -9,6 +9,18 @@ router.get("/", async (req: Request, res: Response) => {
     res.json(ubicaciones);
 });
 
+router.get("/:id", async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const ubicacion = await prisma.lugar.findUnique({
+        where: { id: Number(id) },
+        
+    });
+    if (!ubicacion) {
+        return res.status(404).json({ error: "Ubicación no encontrada" });
+    }
+    res.json(ubicacion);
+});
+
 router.post("/", async (req: Request, res: Response) => {
     const { nombre } = req.body;
     const ubicacion = await prisma.lugar.create({ data: { nombre } });

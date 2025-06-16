@@ -19,10 +19,16 @@ const personasActivas: Record<
   { entrada: string; ultimaVezVisto: number }
 > = {};
 
+interface Aula {
+  id: number;
+  nombre: string;
+}
+
 export default function Asistencia() {
   const { id_lugar } = useParams();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ubicacionNombre, setUbicacionNombre] = useState<string>("");
 
   // Ahora mantenemos un ComparadorRostros en vez de FaceMatcher
   const [comparador, setComparador] = useState<ComparadorRostros | null>(null);
@@ -45,6 +51,21 @@ export default function Asistencia() {
       window.removeEventListener("beforeunload", enviarSalidas);
     };
   }, [id_lugar]);
+
+  const getAulaNombre = async () => {
+    try {
+      const ubicacion = fetch(API_URL + `/ubicaciones/${id_lugar}`);
+      const aula: Aula = await ubicacion.then((res) => res.json());
+      setUbicacionNombre(aula.nombre);
+    } catch (error) {
+      console.error("Error obteniendo el nombre del aula:", error);
+      return "Aula Desconocida";
+    }
+  };
+
+    useEffect(() => {
+        getAulaNombre();
+    }, []);
 
   useEffect(() => {
     async function init() {
@@ -171,8 +192,8 @@ export default function Asistencia() {
 
   return (
     <div className="p-6 flex flex-col items-center justify-center min-h-screen bg-gray-50 space-y-4">
-        <Navbar />
-      <h1 className="text-2xl font-bold mb-4">Asistencia en {id_lugar}</h1>
+      <Navbar />
+      <h1 className="text-2xl font-bold mb-4">Asistencia en {ubicacionNombre}</h1>
       <p className="text-sm text-gray-600 max-w-3xl mb-4 text-center">
         Asegúrate de que tu cámara esté encendida y que el navegador tenga
         permisos para acceder a ella.
