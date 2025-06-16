@@ -54,7 +54,7 @@ export default function Asistencia() {
 
   const getAulaNombre = async () => {
     try {
-      const ubicacion = fetch(API_URL + `/ubicaciones/${id_lugar}`);
+      const ubicacion = fetch(API_URL + `/ubicaciones/nombre/${id_lugar}`);
       const aula: Aula = await ubicacion.then((res) => res.json());
       setUbicacionNombre(aula.nombre);
     } catch (error) {
