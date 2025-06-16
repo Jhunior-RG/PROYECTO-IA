@@ -1,4 +1,5 @@
 "use client";
+import Navbar from "@/components/Navbar";
 import { API_URL } from "@/services/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -21,8 +22,12 @@ export default function SelectAula() {
     }, []);
     
     return (
-        <div className="flex flex-col items-center p-6 space-y-6">
+        <div className="flex flex-col items-center p-6 space-y-6 h-screen items-cwenter justify-center bg-gradient-to-b from-slate-50 to-slate-100">
+            <Navbar />
             <h1 className="text-2xl font-bold mb-2">Selecciona el aula</h1>
+            <p className="text-slate-600 mb-4">
+                Selecciona el aula donde te encuentras para empezar el reconocimiento facial y registrar asistencias.
+            </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-3xl w-full">
                 {lugares.map((lugar) => (

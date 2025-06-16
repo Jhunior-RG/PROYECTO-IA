@@ -113,7 +113,7 @@ export default function Historial() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 mt-15">
             <Navbar />
             <main className="container mx-auto px-4 py-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
@@ -197,8 +197,9 @@ export default function Historial() {
                         >
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-center space-x-4">
-                                    <div className="bg-teal-100 p-3 rounded-full">
-                                        <FaUser className="text-xl text-teal-600" />
+                                    <div className="bg-teal-100 rounded-full overflow-hidden w-12 h-12 flex items-center justify-center">
+                                        {asistencia.usuario?.perfil === null ? (<FaUser className="text-xl text-teal-600" />) : (<img src={asistencia.usuario?.perfil } className="object-cover w-full h-full"/>)}
+                                        
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-semibold text-slate-800">

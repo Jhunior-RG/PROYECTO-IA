@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 export default function Navbar() {
     const pathname = usePathname();
     const links = [
-        { name: "Inicio", href: "/" },
-        { name: "Historial", href: "/historial" },
-        { name: "Ubicaciones", href: "/ubicaciones" },
-        { name: "Registro", href: "/registro" },
+      { name: "Inicio", href: "/" },
+      { name: "Historial", href: "/historial" },
+      { name: "Ubicaciones", href: "/ubicacion" },
+      { name: "Registro", href: "/registro" },
     ];
 
     return (
-        <nav className=" w-full bg-white/80 backdrop-blur-lg shadow-sm z-50">
+        <nav className=" w-full bg-white/80 backdrop-blur-lg shadow-sm z-50 fixed top-0 left-0">
             <div className="container mx-auto px-6">
                 <div className="flex justify-between items-center h-16">
                     <Link

@@ -5,8 +5,7 @@ frontend/.next/
 backend/.venv/
 backend/uploads
 backend/*.db
-# entorno
-**/.env
+
 backend/routers/__pycache__/
 **/__pycache__
 backend/prisma/database.db
