@@ -2,15 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import {
-    modelos,
-    cargarImagenDesdeURL,
-    detectarRostros,
-    DescriptorRostroEtiquetado,
-    ComparadorRostros,
-    ajustarLienzo,
-    redimensionarResultados,
-} from "@/services/reconocimiento";
+import Rune from "rune";
 import { API_URL, postAsistencia } from "@/services/api";
 
 const personasActivas: Record<
@@ -18,25 +10,52 @@ const personasActivas: Record<
     { entrada: string; ultimaVezVisto: number }
 > = {};
 
+class DescriptorEtiquetado {
+    constructor(public etiqueta: string, public vectores: Float32Array[]) {}
+
+    aFormatoOriginal() {
+        return new Rune.types.LabeledDescriptor(this.etiqueta, this.vectores);
+    }
+}
+
+class ComparadorVectores {
+    private comparador: InstanceType<typeof Rune.types.Matcher>;
+
+    constructor(lista: DescriptorEtiquetado[], umbral: number = 0.6) {
+        const originales =
+            lista.length > 0
+                ? lista.map((d) => d.aFormatoOriginal())
+                : [
+                      new Rune.types.LabeledDescriptor("Desconocido", [
+                          new Float32Array(128),
+                      ]),
+                  ];
+
+        this.comparador = new Rune.types.Matcher(originales, umbral);
+    }
+
+    mejorCoincidencia(descriptor: Float32Array) {
+        const resultado = this.comparador.findBestMatch(descriptor);
+        return {
+            etiqueta: resultado.label,
+            certeza: 1 - resultado.distance,
+        };
+    }
+}
+
 export default function Asistencia() {
     const { id_lugar } = useParams();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    // Ahora mantenemos un ComparadorRostros en vez de FaceMatcher
-    const [comparador, setComparador] = useState<ComparadorRostros | null>(
+    const [comparador, setComparador] = useState<ComparadorVectores | null>(
         null
     );
     const [cargado, setCargado] = useState(false);
 
     useEffect(() => {
         async function init() {
-            const MODELOS_URL = "/models";
-            await Promise.all([
-                modelos.cargarDetector(MODELOS_URL),
-                modelos.cargarPuntosFaciales(MODELOS_URL),
-                modelos.cargarReconocedor(MODELOS_URL),
-            ]);
+            const MODEL_URL = "/models/hog_face_model";
+            await Rune.loadModel(MODEL_URL);
 
             const res = await fetch(API_URL + "/usuarios");
             const personas: {
@@ -45,29 +64,32 @@ export default function Asistencia() {
                 imagenes: string[];
             }[] = await res.json();
 
-            // Para cada usuario, detecto 1 rostro y genero sus descriptores etiquetados
-            const descriptores: DescriptorRostroEtiquetado[] = [];
+            const descriptores: DescriptorEtiquetado[] = [];
+
             for (const persona of personas) {
                 const vectores: Float32Array[] = [];
                 for (const url of persona.imagenes) {
-                    const img = await cargarImagenDesdeURL(url);
-                    const d = await detectarRostros(img);
-                    if (Array.isArray(d) && d[0]?.descriptor) {
-                        vectores.push(d[0].descriptor);
+                    const img = await Rune.io.fetchImageFrom(url);
+                    const detecciones = await Rune.pipeline.processAll(img);
+                    if (
+                        Array.isArray(detecciones) &&
+                        detecciones[0]?.descriptor
+                    ) {
+                        vectores.push(detecciones[0].descriptor);
                     }
                 }
                 if (vectores.length) {
                     descriptores.push(
-                        new DescriptorRostroEtiquetado(persona.nombre, vectores)
+                        new DescriptorEtiquetado(persona.nombre, vectores)
                     );
                 }
             }
 
-            // Creo mi comparador con esos descriptores
-            setComparador(new ComparadorRostros(descriptores));
+            setComparador(new ComparadorVectores(descriptores));
             setCargado(true);
             iniciarCamara();
         }
+
         init();
     }, []);
 
@@ -89,13 +111,11 @@ export default function Asistencia() {
         const canvas = canvasRef.current!;
         if (!comparador) return;
 
-        // Preparo canvas
-        ajustarLienzo(canvas, { width: 1280, height: 720 });
+        Rune.io.resizeCanvasTo(canvas, { width: 1280, height: 720 });
 
         setInterval(async () => {
-            // Detecto rostros en el video
-            const detecciones = await detectarRostros(video);
-            const resultados = redimensionarResultados(detecciones, {
+            const detecciones = await Rune.pipeline.processAll(video);
+            const resultados = Rune.io.scaleOutputs(detecciones, {
                 width: 1280,
                 height: 720,
             });
@@ -105,12 +125,11 @@ export default function Asistencia() {
 
             for (const resultado of resultados) {
                 const { x, y, width, height } = resultado.detection.box;
-                // Dibujo caja
+
                 ctx.strokeStyle = "#00ff00";
                 ctx.lineWidth = 2;
                 ctx.strokeRect(x, y, width, height);
 
-                // Comparo descriptor
                 const match = comparador.mejorCoincidencia(
                     resultado.descriptor
                 );
@@ -118,7 +137,7 @@ export default function Asistencia() {
                     match.etiqueta === "unknown"
                         ? "Desconocido"
                         : match.etiqueta;
-                // Texto
+
                 ctx.fillStyle = "white";
                 ctx.font = "30px Arial";
                 ctx.fillText(nombre, x + 4, y - 5);
@@ -141,7 +160,6 @@ export default function Asistencia() {
                 }
             }
 
-            // Registro salidas tras 30 s sin verse
             const ahora = Date.now();
             for (const [nombre, datos] of Object.entries(personasActivas)) {
                 if (ahora - datos.ultimaVezVisto > 30000) {
