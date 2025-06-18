@@ -95,7 +95,7 @@ export default function Asistencia() {
 
     useEffect(() => {
         async function init() {
-            const MODEL_URL = "/models/modelo_hog_caras.pth";
+            const MODEL_URL = "modelo_hog_caras.pth";
             await Rune.loadModel(MODEL_URL);
 
             const res = await fetch(API_URL + "/usuarios");
@@ -164,13 +164,8 @@ export default function Asistencia() {
             const ctx = canvas.getContext("2d")!;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            let i = 0;
             for (const resultado of resultados) {
-                const { x, y, width, height } = resultado.detection.box;
-
-                ctx.strokeStyle = "#00ff00";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, width, height);
-
                 const match = comparador.mejorCoincidencia(
                     resultado.descriptor
                 );
@@ -178,10 +173,10 @@ export default function Asistencia() {
                     match.etiqueta === "unknown"
                         ? "Desconocido"
                         : match.etiqueta;
-
+                if (nombre === "unknown" || nombre === "Desconocido") continue;
                 ctx.fillStyle = "white";
                 ctx.font = "30px Arial";
-                ctx.fillText(nombre, x + 4, y - 5);
+                ctx.fillText(nombre,30 + 100 * i, 30);
 
                 const ahora = Date.now();
                 if (nombre !== "Desconocido") {
@@ -199,6 +194,7 @@ export default function Asistencia() {
                         personasActivas[nombre].ultimaVezVisto = ahora;
                     }
                 }
+                i += 1;
             }
 
             const ahora = Date.now();
